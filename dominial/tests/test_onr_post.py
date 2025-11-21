@@ -4,7 +4,7 @@ Tests for ONR (Organização Nacional dos Registradores) API integration
 import unittest
 import pytest
 import requests
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.contrib.auth.models import User
 
 
@@ -43,10 +43,9 @@ class TestONRIntegration(TestCase):
             # External API might be unavailable, skip test
             self.skipTest(f"External ONR API unavailable: {e}")
 
-    @unittest.skip("Skipped: requires DEBUG=True (SECURE_SSL_REDIRECT=True causes 301 when DEBUG=False)")
+    @override_settings(SECURE_SSL_REDIRECT=False)
     def test_verificar_cartorios_endpoint(self):
         """Test internal verificar-cartorios endpoint"""
-        # URL already has trailing slash, no follow needed
         response = self.client.post('/dominial/verificar-cartorios/', data={'estado': 'SP'})
         self.assertEqual(response.status_code, 200)
         data = response.json()

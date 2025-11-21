@@ -42,11 +42,18 @@ class DocumentoELancamentoTest(TestCase):
             matricula="123456"
         )
         
-        # Criar tipos de documento e lançamento
+        # Criar tipos de documento e lançamento com flags de validação
         self.tipo_transmissao = DocumentoTipo.objects.create(tipo='transmissao')
         self.tipo_matricula = DocumentoTipo.objects.create(tipo='matricula')
-        self.tipo_registro = LancamentoTipo.objects.create(tipo='registro')
-        self.tipo_averbacao = LancamentoTipo.objects.create(tipo='averbacao')
+        self.tipo_registro = LancamentoTipo.objects.create(
+            tipo='registro',
+            requer_titulo=True,
+            requer_cartorio_origem=True
+        )
+        self.tipo_averbacao = LancamentoTipo.objects.create(
+            tipo='averbacao',
+            requer_descricao=True
+        )
 
     def test_criar_documento_transmissao(self):
         """Testa a criação de um documento do tipo transmissão"""
@@ -126,9 +133,8 @@ class DocumentoELancamentoTest(TestCase):
         # Model __str__: "{tipo.get_tipo_display()} {numero_lancamento} - {documento.numero}"
         self.assertEqual(str(lancamento), f"Averbação AV-001 - MAT001")
 
-    @unittest.skip("Validation requires LancamentoTipo.requer_transmissao=True, not set in test setup")
-    def test_validacao_registro_sem_transmitente(self):
-        """Testa a validação de registro sem transmitente"""
+    def test_validacao_registro_sem_titulo(self):
+        """Testa a validação de registro sem título (requer_titulo=True)"""
         documento = Documento.objects.create(
             imovel=self.imovel,
             tipo=self.tipo_transmissao,
@@ -143,19 +149,19 @@ class DocumentoELancamentoTest(TestCase):
             documento=documento,
             tipo=self.tipo_registro,
             data=timezone.now().date(),
-            adquirente=self.pessoa2
+            cartorio_origem=self.cartorio  # Has cartorio but no titulo
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as context:
             lancamento.full_clean()
+        self.assertIn('Título', str(context.exception))
 
-    @unittest.skip("Validation requires LancamentoTipo.requer_transmissao=True, not set in test setup")
-    def test_validacao_registro_sem_adquirente(self):
-        """Testa a validação de registro sem adquirente"""
+    def test_validacao_registro_sem_cartorio_origem(self):
+        """Testa a validação de registro sem cartório origem (requer_cartorio_origem=True)"""
         documento = Documento.objects.create(
             imovel=self.imovel,
             tipo=self.tipo_transmissao,
-            numero="TRANS001",
+            numero="TRANS002",
             data=timezone.now().date(),
             cartorio=self.cartorio,
             livro="1",
@@ -166,15 +172,15 @@ class DocumentoELancamentoTest(TestCase):
             documento=documento,
             tipo=self.tipo_registro,
             data=timezone.now().date(),
-            transmitente=self.pessoa1
+            titulo="Compra e Venda"  # Has titulo but no cartorio_origem
         )
 
-        with self.assertRaises(ValidationError):
+        with self.assertRaises(ValidationError) as context:
             lancamento.full_clean()
+        self.assertIn('Cartório de origem', str(context.exception))
 
-    @unittest.skip("Validation requires LancamentoTipo.requer_descricao=True, not set in test setup")
-    def test_validacao_averbacao_sem_detalhes(self):
-        """Testa a validação de averbação sem detalhes"""
+    def test_validacao_averbacao_sem_descricao(self):
+        """Testa a validação de averbação sem descrição (requer_descricao=True)"""
         documento = Documento.objects.create(
             imovel=self.imovel,
             tipo=self.tipo_matricula,
@@ -189,10 +195,12 @@ class DocumentoELancamentoTest(TestCase):
             documento=documento,
             tipo=self.tipo_averbacao,
             data=timezone.now().date()
+            # No descricao provided
         )
 
-        with self.assertRaises(ValidationError):
-            lancamento.full_clean() 
+        with self.assertRaises(ValidationError) as context:
+            lancamento.full_clean()
+        self.assertIn('Descrição', str(context.exception)) 
 
 class HierarquiaCadeiaDominialTest(TestCase):
     def setUp(self):
