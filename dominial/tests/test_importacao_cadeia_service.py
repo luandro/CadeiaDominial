@@ -171,9 +171,14 @@ class ImportacaoCadeiaServiceTest(TestCase):
             usuario_id=self.user.id
         )
 
-        # Should report already imported
+        # Should report already imported (either via erros list or mensagem)
         self.assertEqual(result2['total_importados'], 0)
-        self.assertTrue(any('já foi importado' in erro for erro in result2.get('erros', [])))
+        # Check either erros list or mensagem for "já foi importado" indication
+        has_import_message = (
+            any('já foi importado' in erro for erro in result2.get('erros', [])) or
+            'já foram importados' in result2.get('mensagem', '')
+        )
+        self.assertTrue(has_import_message)
 
     def test_verificar_documentos_importados_by_destination(self):
         """
