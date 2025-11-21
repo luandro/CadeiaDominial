@@ -44,3 +44,4 @@ restaurar_backup_dev.sh
 backups/
 docs/livro/
 test-results/
+.venv/
