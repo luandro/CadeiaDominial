@@ -3,10 +3,29 @@ End-to-end tests for lancamento creation workflow using Playwright.
 
 These tests verify complete user workflows from login through lancamento creation,
 including form interactions, validation, and success confirmation.
+
+Note: These tests require playwright to be installed. They are skipped if playwright
+is not available.
 """
 
-import pytest
-from playwright.sync_api import Page, expect
+import unittest
+
+# Skip entire module if playwright is not installed
+try:
+    import pytest
+    from playwright.sync_api import Page, expect
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    # Create dummy classes for when playwright is not available
+    pytest = None
+    Page = None
+    expect = None
+
+# Skip all tests in this module if playwright is not available
+if not PLAYWRIGHT_AVAILABLE:
+    raise unittest.SkipTest("Playwright not installed - E2E tests skipped")
+
 from django.contrib.auth.models import User
 
 from dominial.tests.factories import (
@@ -19,7 +38,7 @@ from dominial.tests.factories import (
 )
 
 
-pytestmark = pytest.mark.e2e
+pytestmark = pytest.mark.e2e if pytest else None
 
 
 @pytest.fixture
